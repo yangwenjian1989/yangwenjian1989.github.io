@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>股票空间实时表格</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        table { border-collapse: collapse; width: 100%; margin-top: 10px; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: center; }
+        th { background-color: #f2f2f2; }
+        #result { margin-top: 20px; }
+    </style>
+</head>
+<body>
+    <h2>股票空间实时表格</h2>
+    <button onclick="startRealtime()">开始实时更新</button>
+    <button onclick="stopRealtime()">停止</button>
+    <div id="result"></div>
+
+    <script>
+        let intervalId = null;
+        // 根据新数据更新 stocks，单位为亿元
+        const stocks = [
+            { code: "603179.SH", name: "新泉股份", lowLimit: 250, upLimit: 350 },
+            { code: "9896.HK", name: "名创优品", lowLimit: 440, upLimit: 726 },
+            { code: "600438.SH", name: "通威股份", lowLimit: 850, upLimit: 1400 },
+            { code: "300308.SZ", name: "中际旭创", lowLimit: 1200, upLimit: 1600 },
+            { code: "601127.SH", name: "赛力斯", lowLimit: 2280, upLimit: 2660 },
+            { code: "300866.SZ", name: "安克创新", lowLimit: 493, upLimit: 725 },
+            { code: "300433.SZ", name: "蓝思科技", lowLimit: 1232, upLimit: 1760 },
+            { code: "002126.SZ", name: "银轮股份", lowLimit: 242, upLimit: 330 },
+            { code: "002920.SZ", name: "德赛西威", lowLimit: 600, upLimit: 900 },
+            { code: "605117.SH", name: "德业股份", lowLimit: 570, upLimit: 750 },
+            { code: "601138.SH", name: "工业富联", lowLimit: 4000, upLimit: 5500 },
+            { code: "688698.SH", name: "伟创电气", lowLimit: 84, upLimit: 168 },
+            { code: "601799.SH", name: "星宇股份", lowLimit: 373, upLimit: 450 },
+            { code: "002371.SZ", name: "北方华创", lowLimit: 2000, upLimit: 2925 },
+            { code: "605499.SH", name: "东鹏饮料", lowLimit: 1100, upLimit: 1500 },
+            { code: "603501.SH", name: "韦尔股份", lowLimit: 1350, upLimit: 2100 },
+            { code: "688305.SH", name: "科德数控", lowLimit: 63, upLimit: 96 },
+            { code: "603596.SH", name: "伯特利", lowLimit: 300, upLimit: 450 },
+            { code: "601689.SH", name: "拓普集团", lowLimit: 1020, upLimit: 1360 },
+            { code: "600114.SH", name: "东睦股份", lowLimit: 125, upLimit: 170 },
+            { code: "002837.SZ", name: "英维克", lowLimit: 224, upLimit: 448 },
+            { code: "300124.SZ", name: "汇川技术", lowLimit: 1200, upLimit: 2400 },
+            { code: "688072.SH", name: "拓荆科技", lowLimit: 400, upLimit: 600 },
+            { code: "002847.SZ", name: "盐津铺子", lowLimit: 130, upLimit: 195 },
+            { code: "600584.SH", name: "长电科技", lowLimit: 530, upLimit: 800 },
+            { code: "002475.SZ", name: "立讯精密", lowLimit: 2568, upLimit: 3531 },
+            { code: "002444.SZ", name: "巨星科技", lowLimit: 320, upLimit: 400 },
+            { code: "688111.SH", name: "金山办公", lowLimit: 1300, upLimit: 1890 },
+            { code: "002050.SZ", name: "三花智控", lowLimit: 1020, upLimit: 1360 },
+            { code: "0700.HK", name: "腾讯控股", lowLimit: 35000, upLimit: 54439 },
+            { code: "002938.SZ", name: "鹏鼎控股", lowLimit: 600, upLimit: 1000 },
+            { code: "688981.SH", name: "中芯国际", lowLimit: 5587, upLimit: 8380 },
+            { code: "0285.HK", name: "比亚迪电子", lowLimit: 793, upLimit: 1220 },
+            { code: "603997.SH", name: "继峰股份", lowLimit: 120, upLimit: 150 },
+            { code: "000333.SZ", name: "美的集团", lowLimit: 4600, upLimit: 5800 },
+            { code: "300442.SZ", name: "润泽科技", lowLimit: 900, upLimit: 1200 },
+            { code: "002518.SZ", name: "科士达", lowLimit: 115, upLimit: 180 },
+            { code: "600519.SH", name: "贵州茅台", lowLimit: 17000, upLimit: 21000 },
+            { code: "301029.SZ", name: "怡合达", lowLimit: 110, upLimit: 180 },
+            { code: "688052.SH", name: "纳芯微", lowLimit: 140, upLimit: 210 }
+        ];
+
+        async function fetchMarketCap(stockCode) {
+            const marketPrefix = stockCode.includes('.SH') || stockCode.includes('.SZ') ? 
+                (stockCode.startsWith('6') ? '1' : '0') : ''; // 沪深市场
+            const code = stockCode.replace('.SH', '').replace('.SZ', '').replace('.HK', '');
+            const url = `http://push2.eastmoney.com/api/qt/stock/get?secid=${marketPrefix}.${code}`;
+            try {
+                const response = await fetch(url);
+                const data = await response.json();
+                if (!data.data || !data.data.f116) {
+                    throw new Error(`无法获取 ${stockCode} 的市值数据`);
+                }
+                return parseFloat(data.data.f116) / 1e8; // 转换为亿元
+            } catch (error) {
+                console.error(error.message);
+                return null; // 返回 null 表示获取失败
+            }
+        }
+
+        async function updateTable() {
+            const resultDiv = document.getElementById('result');
+            const stockData = await Promise.all(stocks.map(async stock => {
+                const currentMarketCap = await fetchMarketCap(stock.code);
+                if (currentMarketCap === null) return null;
+                const upSpace = ((stock.upLimit - currentMarketCap) / currentMarketCap * 100).toFixed(2);
+                const downSpace = ((currentMarketCap - stock.lowLimit) / currentMarketCap * 100).toFixed(2);
+                return { ...stock, currentMarketCap, upSpace, downSpace };
+            }));
+
+            // 过滤掉获取失败的股票
+            const validData = stockData.filter(item => item !== null);
+
+            // 按向上空间降序排序
+            validData.sort((a, b) => parseFloat(b.upSpace) - parseFloat(a.upSpace));
+
+            // 生成表格
+            let tableHTML = '<table><tr><th>股票代码</th><th>股票名称</th><th>当前市值 (亿元)</th><th>向上空间 (%)</th><th>向下空间 (%)</th></tr>';
+            validData.forEach(stock => {
+                tableHTML += `
+                    <tr>
+                        <td>${stock.code}</td>
+                        <td>${stock.name}</td>
+                        <td>${stock.currentMarketCap.toFixed(2)}</td>
+                        <td>${stock.upSpace}</td>
+                        <td>${stock.downSpace}</td>
+                    </tr>
+                `;
+            });
+            tableHTML += '</table>';
+            resultDiv.innerHTML = tableHTML;
+        }
+
+        function startRealtime() {
+            if (intervalId) return;
+            updateTable(); // 立即执行一次
+            intervalId = setInterval(updateTable, 2000); // 每2秒更新一次
+        }
+
+        function stopRealtime() {
+            if (intervalId) {
+                clearInterval(intervalId);
+                intervalId = null;
+                document.getElementById('result').innerHTML += '<br>已停止实时更新';
+            }
+        }
+    </script>
+</body>
+</html>
