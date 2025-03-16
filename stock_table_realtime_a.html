@@ -88,7 +88,7 @@
                 const currentMarketCap = await fetchMarketCap(stock.code);
                 if (currentMarketCap === null) return null;
                 const upSpace = ((stock.upLimit - currentMarketCap) / currentMarketCap * 100).toFixed(2);
-                const downSpace = ((currentMarketCap - stock.lowLimit) / currentMarketCap * 100).toFixed(2);
+                const downSpace = ((stock.lowLimit - currentMarketCap) / currentMarketCap * 100).toFixed(2);
                 return { ...stock, currentMarketCap, upSpace, downSpace };
             }));
 
