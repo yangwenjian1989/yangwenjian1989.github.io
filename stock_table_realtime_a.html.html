@@ -10,17 +10,18 @@
         th, td { border: 1px solid #ddd; padding: 8px; text-align: center; }
         th { background-color: #f2f2f2; }
         #result { margin-top: 20px; }
+        #status { color: red; }
     </style>
 </head>
 <body>
     <h2>股票空间实时表格</h2>
     <button onclick="startRealtime()">开始实时更新</button>
     <button onclick="stopRealtime()">停止</button>
+    <div id="status"></div>
     <div id="result"></div>
 
     <script>
         let intervalId = null;
-        // 根据新数据更新 stocks，单位为亿元
         const stocks = [
             { code: "603179.SH", name: "新泉股份", lowLimit: 250, upLimit: 350 },
             { code: "9896.HK", name: "名创优品", lowLimit: 440, upLimit: 726 },
@@ -66,24 +67,30 @@
 
         async function fetchMarketCap(stockCode) {
             const marketPrefix = stockCode.includes('.SH') || stockCode.includes('.SZ') ? 
-                (stockCode.startsWith('6') ? '1' : '0') : ''; // 沪深市场
+                (stockCode.startsWith('6') ? '1' : '0') : '';
             const code = stockCode.replace('.SH', '').replace('.SZ', '').replace('.HK', '');
             const url = `https://cors-anywhere.herokuapp.com/https://push2.eastmoney.com/api/qt/stock/get?secid=${marketPrefix}.${code}`;
             try {
                 const response = await fetch(url);
+                console.log(`请求 ${stockCode} 的状态: ${response.status}`); // 调试状态码
                 const data = await response.json();
+                console.log(`返回数据 for ${stockCode}: ${JSON.stringify(data)}`); // 调试返回数据
                 if (!data.data || !data.data.f116) {
                     throw new Error(`无法获取 ${stockCode} 的市值数据`);
                 }
-                return parseFloat(data.data.f116) / 1e8; // 转换为亿元
+                return parseFloat(data.data.f116) / 1e8;
             } catch (error) {
-                console.error(error.message);
-                return null; // 返回 null 表示获取失败
+                console.error(`错误 for ${stockCode}: ${error.message}`);
+                document.getElementById('status').innerHTML = `错误: ${error.message}`;
+                return null;
             }
         }
 
         async function updateTable() {
             const resultDiv = document.getElementById('result');
+            const statusDiv = document.getElementById('status');
+            statusDiv.innerHTML = '正在加载数据...';
+            
             const stockData = await Promise.all(stocks.map(async stock => {
                 const currentMarketCap = await fetchMarketCap(stock.code);
                 if (currentMarketCap === null) return null;
@@ -92,13 +99,13 @@
                 return { ...stock, currentMarketCap, upSpace, downSpace };
             }));
 
-            // 过滤掉获取失败的股票
             const validData = stockData.filter(item => item !== null);
+            if (validData.length === 0) {
+                statusDiv.innerHTML = '无法加载任何股票数据，请检查网络或代理服务';
+                return;
+            }
 
-            // 按向上空间降序排序
             validData.sort((a, b) => parseFloat(b.upSpace) - parseFloat(a.upSpace));
-
-            // 生成表格
             let tableHTML = '<table><tr><th>股票代码</th><th>股票名称</th><th>当前市值 (亿元)</th><th>向上空间 (%)</th><th>向下空间 (%)</th></tr>';
             validData.forEach(stock => {
                 tableHTML += `
@@ -113,12 +120,14 @@
             });
             tableHTML += '</table>';
             resultDiv.innerHTML = tableHTML;
+            statusDiv.innerHTML = '数据加载完成';
         }
 
         function startRealtime() {
             if (intervalId) return;
-            updateTable(); // 立即执行一次
-            intervalId = setInterval(updateTable, 2000); // 每2秒更新一次
+            updateTable();
+            intervalId = setInterval(updateTable, 2000);
+            document.getElementById('status').innerHTML = '实时更新已启动';
         }
 
         function stopRealtime() {
@@ -126,6 +135,7 @@
                 clearInterval(intervalId);
                 intervalId = null;
                 document.getElementById('result').innerHTML += '<br>已停止实时更新';
+                document.getElementById('status').innerHTML = '已停止';
             }
         }
     </script>
