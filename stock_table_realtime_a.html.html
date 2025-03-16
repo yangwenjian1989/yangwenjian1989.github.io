@@ -10,6 +10,7 @@
         th, td { border: 1px solid #ddd; padding: 8px; text-align: center; }
         th { background-color: #f2f2f2; }
         #result { margin-top: 20px; }
+        .error { color: red; }
     </style>
 </head>
 <body>
@@ -20,78 +21,115 @@
 
     <script>
         let intervalId = null;
+
+        // 股票数据，包含代码、名称和上下限
         const stocks = [
             { code: "603179.SH", name: "新泉股份", lowLimit: 250, upLimit: 350 },
             { code: "9896.HK", name: "名创优品", lowLimit: 440, upLimit: 726 },
             { code: "600438.SH", name: "通威股份", lowLimit: 850, upLimit: 1400 }
-            // Keep the rest as needed
         ];
 
+        // 获取市值数据的函数，使用代理解决 CORS 问题
         async function fetchMarketCap(stockCode) {
+            // 根据股票代码生成东财 API 的 secid 参数
             const marketPrefix = stockCode.includes('.SH') || stockCode.includes('.SZ') 
                 ? (stockCode.startsWith('6') ? '1' : '0') 
-                : '';
+                : (stockCode.includes('.HK') ? '116' : ''); // 港股前缀为 116
             const code = stockCode.replace('.SH', '').replace('.SZ', '').replace('.HK', '');
-            const url = `https://push2.eastmoney.com/api/qt/stock/get?secid=${marketPrefix}.${code}`;
+            // 使用 cors-anywhere 代理，避免跨域问题
+            const url = `https://cors-anywhere.herokuapp.com/https://push2.eastmoney.com/api/qt/stock/get?secid=${marketPrefix}.${code}`;
+            
             try {
-                const response = await fetch(url);
+                const response = await fetch(url, {
+                    headers: {
+                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' // 模拟浏览器请求
+                    }
+                });
                 if (!response.ok) {
-                    throw new Error(`HTTP error! Status: ${response.status}`);
+                    throw new Error(`HTTP 错误！状态码: ${response.status}`);
                 }
                 const data = await response.json();
-                console.log('API Response:', data);
+                console.log(`股票 ${stockCode} 的返回数据:`, data); // 调试：检查返回数据
                 if (!data.data || !data.data.f116) {
-                    throw new Error(`No market cap data for ${stockCode}. Response: ${JSON.stringify(data)}`);
+                    throw new Error(`没有找到 ${stockCode} 的市值数据`);
                 }
-                return parseFloat(data.data.f116) / 1e8;
+                return parseFloat(data.data.f116) / 1e8; // 返回市值（亿元）
             } catch (error) {
-                console.error(`Error fetching ${stockCode}:`, error.message);
-                return null;
+                console.error(`获取 ${stockCode} 数据失败:`, error.message);
+                return null; // 返回 null 表示失败
             }
         }
 
+        // 更新表格的函数
         async function updateTable() {
             const resultDiv = document.getElementById('result');
+            resultDiv.innerHTML = '正在加载数据...'; // 显示加载提示
+
+            // 获取所有股票的市值数据
             const stockData = await Promise.all(stocks.map(async stock => {
                 const currentMarketCap = await fetchMarketCap(stock.code);
-                if (currentMarketCap === null) return null;
+                if (currentMarketCap === null) {
+                    return { ...stock, currentMarketCap: '获取失败', upSpace: '-', downSpace: '-' };
+                }
                 const upSpace = ((stock.upLimit - currentMarketCap) / currentMarketCap * 100).toFixed(2);
                 const downSpace = ((currentMarketCap - stock.lowLimit) / currentMarketCap * 100).toFixed(2);
                 return { ...stock, currentMarketCap, upSpace, downSpace };
             }));
 
-            const validData = stockData.filter(item => item !== null);
-            validData.sort((a, b) => parseFloat(b.upSpace) - parseFloat(a.upSpace));
+            // 按向上空间排序
+            const validData = stockData.sort((a, b) => {
+                if (a.upSpace === '-' || b.upSpace === '-') return 0; // 处理无效数据
+                return parseFloat(b.upSpace) - parseFloat(a.upSpace);
+            });
 
-            let tableHTML = '<table><tr><th>股票代码</th><th>股票名称</th><th>当前市值 (亿元)</th><th>向上空间 (%)</th><th>向下空间 (%)</th></tr>';
+            // 生成表格 HTML
+            let tableHTML = `
+                <table>
+                    <tr>
+                        <th>股票代码</th>
+                        <th>股票名称</th>
+                        <th>当前市值 (亿元)</th>
+                        <th>向上空间 (%)</th>
+                        <th>向下空间 (%)</th>
+                    </tr>`;
             validData.forEach(stock => {
                 tableHTML += `
                     <tr>
                         <td>${stock.code}</td>
                         <td>${stock.name}</td>
-                        <td>${stock.currentMarketCap.toFixed(2)}</td>
+                        <td>${typeof stock.currentMarketCap === 'number' ? stock.currentMarketCap.toFixed(2) : stock.currentMarketCap}</td>
                         <td>${stock.upSpace}</td>
                         <td>${stock.downSpace}</td>
-                    </tr>
-                `;
+                    </tr>`;
             });
             tableHTML += '</table>';
+
+            // 更新页面内容
             resultDiv.innerHTML = tableHTML;
         }
 
+        // 开始实时更新
         function startRealtime() {
-            if (intervalId) return;
-            updateTable();
-            intervalId = setInterval(updateTable, 5000);
+            if (intervalId) return; // 防止重复启动
+            updateTable(); // 立即执行一次
+            intervalId = setInterval(updateTable, 5000); // 每5秒更新
+            console.log('实时更新已启动');
         }
 
+        // 停止实时更新
         function stopRealtime() {
             if (intervalId) {
                 clearInterval(intervalId);
                 intervalId = null;
-                document.getElementById('result').innerHTML += '<br>已停止实时更新';
+                document.getElementById('result').innerHTML += '<br><span class="error">已停止实时更新</span>';
+                console.log('实时更新已停止');
             }
         }
+
+        // 页面加载时自动启动（可选）
+        window.onload = function() {
+            startRealtime();
+        };
     </script>
 </body>
 </html>
