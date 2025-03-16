@@ -3,14 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>股票空间实时表格（支持港股）</title>
+    <title>股票空间实时表格</title>
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; }
         table { border-collapse: collapse; width: 100%; margin-top: 10px; }
         th, td { border: 1px solid #ddd; padding: 8px; text-align: center; }
         th { background-color: #f2f2f2; }
         #result { margin-top: 20px; }
-        #debug { color: red; margin-top: 10px; }
     </style>
 </head>
 <body>
@@ -18,18 +17,13 @@
     <button onclick="startRealtime()">开始实时更新</button>
     <button onclick="stopRealtime()">停止</button>
     <div id="result"></div>
-    <div id="debug"></div>
 
     <script>
         let intervalId = null;
-        const API_KEY = 'EASCHN1ILSDQJHSF'; // Alpha Vantage API Key
-        // 添加缓存，避免重复请求
-        let marketCapCache = {};
-
-        // 股票数据，单位为亿元，港股添加总股本
+        // 根据新数据更新 stocks，单位为亿元
         const stocks = [
             { code: "603179.SH", name: "新泉股份", lowLimit: 250, upLimit: 350 },
-            { code: "9896.HK", name: "名创优品", lowLimit: 440, upLimit: 726, totalShares: 1258000000 },
+            { code: "9896.HK", name: "名创优品", lowLimit: 440, upLimit: 726 },
             { code: "600438.SH", name: "通威股份", lowLimit: 850, upLimit: 1400 },
             { code: "300308.SZ", name: "中际旭创", lowLimit: 1200, upLimit: 1600 },
             { code: "601127.SH", name: "赛力斯", lowLimit: 2280, upLimit: 2660 },
@@ -57,10 +51,10 @@
             { code: "002444.SZ", name: "巨星科技", lowLimit: 320, upLimit: 400 },
             { code: "688111.SH", name: "金山办公", lowLimit: 1300, upLimit: 1890 },
             { code: "002050.SZ", name: "三花智控", lowLimit: 1020, upLimit: 1360 },
-            { code: "0700.HK", name: "腾讯控股", lowLimit: 35000, upLimit: 54439, totalShares: 9597000000 },
+            { code: "0700.HK", name: "腾讯控股", lowLimit: 35000, upLimit: 54439 },
             { code: "002938.SZ", name: "鹏鼎控股", lowLimit: 600, upLimit: 1000 },
             { code: "688981.SH", name: "中芯国际", lowLimit: 5587, upLimit: 8380 },
-            { code: "0285.HK", name: "比亚迪电子", lowLimit: 793, upLimit: 1220, totalShares: 2253000000 },
+            { code: "0285.HK", name: "比亚迪电子", lowLimit: 793, upLimit: 1220 },
             { code: "603997.SH", name: "继峰股份", lowLimit: 120, upLimit: 150 },
             { code: "000333.SZ", name: "美的集团", lowLimit: 4600, upLimit: 5800 },
             { code: "300442.SZ", name: "润泽科技", lowLimit: 900, upLimit: 1200 },
@@ -71,69 +65,25 @@
         ];
 
         async function fetchMarketCap(stockCode) {
-            const marketType = stockCode.includes('.HK') ? 'HK' : (stockCode.includes('.SH') || stockCode.includes('.SZ') ? 'CN' : '');
+            const marketPrefix = stockCode.includes('.SH') || stockCode.includes('.SZ') ? 
+                (stockCode.startsWith('6') ? '1' : '0')s : ''; // 沪深市场
             const code = stockCode.replace('.SH', '').replace('.SZ', '').replace('.HK', '');
-
-            // 检查缓存
-            if (marketCapCache[stockCode]) {
-                return marketCapCache[stockCode];
-            }
-
-            if (marketType === 'HK') {
-                // 使用代理解决 Alpha Vantage 的 CORS 问题
-                const proxyUrl = 'https://cors-anywhere.herokuapp.com/';
-                const url = `${proxyUrl}https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol=${code}.HK&apikey=${API_KEY}&datatype=json`;
-                try {
-                    const response = await fetch(url);
-                    if (!response.ok) throw new Error(`HTTP 错误！状态码: ${response.status}`);
-                    const data = await response.json();
-                    if (!data || !data["Time Series (Daily)"] || !Object.keys(data["Time Series (Daily)"])[0]) {
-                        throw new Error(`无法获取 ${stockCode} 的日线数据`);
-                    }
-                    const latestDate = Object.keys(data["Time Series (Daily)"])[0];
-                    const latestClose = parseFloat(data["Time Series (Daily)"][latestDate]["4. close"]);
-                    const stock = stocks.find(s => s.code === stockCode);
-                    if (!stock || !stock.totalShares) {
-                        throw new Error(`缺少 ${stockCode} 的总股本数据`);
-                    }
-                    const marketCapHKD = latestClose * stock.totalShares; // 港币市值
-                    const marketCapCNY = marketCapHKD * 0.92; // 转换为人民币
-                    const marketCap = marketCapCNY / 1e8; // 转换为亿元
-                    marketCapCache[stockCode] = marketCap; // 缓存结果
-                    return marketCap;
-                } catch (error) {
-                    console.error(`港股 ${stockCode} 错误:`, error.message);
-                    document.getElementById('debug').innerHTML += `<p>港股 ${stockCode} 错误: ${error.message}</p>`;
-                    return null;
+            const url = `https://push2.eastmoney.com/api/qt/stock/get?secid=${marketPrefix}.${code}`;
+            try {
+                const response = await fetch(url);
+                const data = await response.json();
+                if (!data.data || !data.data.f116) {
+                    throw new Error(`无法获取 ${stockCode} 的市值数据`);
                 }
-            } else if (marketType === 'CN') {
-                // A股使用东方财富 API，添加代理解决可能的跨域问题
-                const market = stockCode.startsWith('6') ? '1' : '0';
-                const proxyUrl = 'https://cors-anywhere.herokuapp.com/';
-                const url = `${proxyUrl}http://push2.eastmoney.com/api/qt/stock/get?secid=${market}.${code}`;
-                try {
-                    const response = await fetch(url);
-                    if (!response.ok) throw new Error(`HTTP 错误！状态码: ${response.status}`);
-                    const data = await response.json();
-                    if (!data.data || !data.data.f116) {
-                        throw new Error(`无法获取 ${stockCode} 的市值数据`);
-                    }
-                    const marketCap = parseFloat(data.data.f116) / 1e8; // 转换为亿元
-                    marketCapCache[stockCode] = marketCap; // 缓存结果
-                    return marketCap;
-                } catch (error) {
-                    console.error(`A股 ${stockCode} 错误:`, error.message);
-                    document.getElementById('debug').innerHTML += `<p>A股 ${stockCode} 错误: ${error.message}</p>`;
-                    return null;
-                }
+                return parseFloat(data.data.f116) / 1e8; // 转换为亿元
+            } catch (error) {
+                console.error(error.message);
+                return null; // 返回 null 表示获取失败
             }
-            return null;
         }
 
         async function updateTable() {
             const resultDiv = document.getElementById('result');
-            resultDiv.innerHTML = '正在加载数据...';
-
             const stockData = await Promise.all(stocks.map(async stock => {
                 const currentMarketCap = await fetchMarketCap(stock.code);
                 if (currentMarketCap === null) return null;
@@ -168,7 +118,7 @@
         function startRealtime() {
             if (intervalId) return;
             updateTable(); // 立即执行一次
-            intervalId = setInterval(updateTable, 300000); // 每5分钟更新一次，避免触发 Alpha Vantage 限制
+            intervalId = setInterval(updateTable, 2000); // 每2秒更新一次
         }
 
         function stopRealtime() {
