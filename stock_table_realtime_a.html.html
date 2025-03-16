@@ -68,7 +68,7 @@
             const marketPrefix = stockCode.includes('.SH') || stockCode.includes('.SZ') ? 
                 (stockCode.startsWith('6') ? '1' : '0') : ''; // 沪深市场
             const code = stockCode.replace('.SH', '').replace('.SZ', '').replace('.HK', '');
-            const url = `https://push2.eastmoney.com/api/qt/stock/get?secid=${marketPrefix}.${code}`;
+            const url = `https://cors-anywhere.herokuapp.com/https://push2.eastmoney.com/api/qt/stock/get?secid=${marketPrefix}.${code}`;
             try {
                 const response = await fetch(url);
                 const data = await response.json();
