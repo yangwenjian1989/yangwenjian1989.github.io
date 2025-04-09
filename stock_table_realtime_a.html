@@ -20,57 +20,22 @@
 
     <script>
         let intervalId = null;
-        // 根据新数据更新 stocks，单位为亿元
+
         const stocks = [
             { code: "300433.SZ", name: "蓝思科技", lowLimit: 800, upLimit: 1760 },
             { code: "0285.HK", name: "比亚迪电子", lowLimit: 600, upLimit: 1200 },
             { code: "600438.SH", name: "通威股份", lowLimit: 850, upLimit: 1400 },
             { code: "002475.SZ", name: "立讯精密", lowLimit: 2100, upLimit: 3531 },
-            { code: "9896.HK", name: "名创优品", lowLimit: 300, upLimit: 600 },
-            { code: "603179.SH", name: "新泉股份", lowLimit: 200, upLimit: 300 },
-            { code: "002444.SZ", name: "巨星科技", lowLimit: 270, upLimit: 400 },
-            { code: "601689.SH", name: "拓普集团", lowLimit: 777, upLimit: 1200 },
-            { code: "300308.SZ", name: "中际旭创", lowLimit: 554, upLimit: 1200 },
-            { code: "002050.SZ", name: "三花智控", lowLimit: 800, upLimit: 1300 },
-            { code: "688361.SH", name: "中科飞测", lowLimit: 250, upLimit: 400 },
-            { code: "002920.SZ", name: "德赛西威", lowLimit: 550, upLimit: 800 },
-            { code: "002837.SZ", name: "英维克", lowLimit: 174, upLimit: 348 },
-            { code: "300866.SZ", name: "安克创新", lowLimit: 371.2, upLimit: 580 },
-            { code: "603596.SH", name: "伯特利", lowLimit: 300, upLimit: 450 },
-            { code: "300783.SZ", name: "三只松鼠", lowLimit: 94.5, upLimit: 162 },
-            { code: "603501.SH", name: "韦尔股份", lowLimit: 1400, upLimit: 2100 },
-            { code: "300124.SZ", name: "汇川技术", lowLimit: 1400, upLimit: 2400 },
-            { code: "605117.SH", name: "德业股份", lowLimit: 500, upLimit: 750 },
-            { code: "002126.SZ", name: "银轮股份", lowLimit: 160, upLimit: 260 },
-            { code: "688698.SH", name: "伟创电气", lowLimit: 63, upLimit: 126 },
-            { code: "300442.SZ", name: "润泽科技", lowLimit: 800, upLimit: 1200 },
-            { code: "600114.SH", name: "东睦股份", lowLimit: 97.6, upLimit: 146.4 },
             { code: "0700.HK", name: "腾讯控股", lowLimit: 35000, upLimit: 54439 },
-            { code: "601138.SH", name: "工业富联", lowLimit: 2800, upLimit: 4300 },
-            { code: "002594.SZ", name: "比亚迪", lowLimit: 9000, upLimit: 13000 },
-            { code: "301029.SZ", name: "怡合达", lowLimit: 110, upLimit: 180 },
-            { code: "688305.SH", name: "科德数控", lowLimit: 64.8, upLimit: 99 },
-            { code: "688111.SH", name: "金山办公", lowLimit: 1220, upLimit: 1830 },
-            { code: "601799.SH", name: "星宇股份", lowLimit: 373, upLimit: 450 },
-            { code: "688037.SH", name: "芯源微", lowLimit: 150, upLimit: 250 },
-            { code: "600584.SH", name: "长电科技", lowLimit: 500, upLimit: 700 },
-            { code: "605499.SH", name: "东鹏饮料", lowLimit: 1260, upLimit: 1710 },
-            { code: "688052.SH", name: "纳芯微", lowLimit: 140, upLimit: 280 },
-            { code: "000651.SZ", name: "格力电器", lowLimit: 2420, upLimit: 3080 },
-            { code: "002371.SZ", name: "北方华创", lowLimit: 2200, upLimit: 3000 },
-            { code: "688072.SH", name: "拓荆科技", lowLimit: 408, upLimit: 561 },
-            { code: "000333.SZ", name: "美的集团", lowLimit: 4730, upLimit: 6450 },
-            { code: "000858.SZ", name: "五粮液", lowLimit: 4700, upLimit: 6110 },
             { code: "600519.SH", name: "贵州茅台", lowLimit: 19000, upLimit: 22800 },
-            { code: "601127.SH", name: "赛力斯", lowLimit: 1700, upLimit: 2380 },
-            { code: "688981.SH", name: "中芯国际", lowLimit: 5590, upLimit: 8385 },
-            { code: "603997.SH", name: "继峰股份", lowLimit: 120, upLimit: 150 },
-            { code: "002847.SZ", name: "盐津铺子", lowLimit: 130, upLimit: 227.5 }
+            { code: "002594.SZ", name: "比亚迪", lowLimit: 9000, upLimit: 13000 },
+            { code: "000858.SZ", name: "五粮液", lowLimit: 4700, upLimit: 6110 },
+            { code: "000333.SZ", name: "美的集团", lowLimit: 4730, upLimit: 6450 },
+            { code: "601138.SH", name: "工业富联", lowLimit: 2800, upLimit: 4300 }
+            // 可以添加更多股票
         ];
 
-
-
-        async function fetchMarketCap(stockCode) {
+        async function fetchStockData(stockCode) {
             const marketPrefix = stockCode.includes('.SH') || stockCode.includes('.SZ') ? 
                 (stockCode.startsWith('6') ? '1' : '0') : ''; // 沪深市场
             const code = stockCode.replace('.SH', '').replace('.SZ', '').replace('.HK', '');
@@ -78,60 +43,74 @@
             try {
                 const response = await fetch(url);
                 const data = await response.json();
-                if (!data.data || !data.data.f116) {
-                    throw new Error(`无法获取 ${stockCode} 的市值数据`);
+                if (!data.data || !data.data.f116 || typeof data.data.f3 === 'undefined') {
+                    throw new Error(`无法获取 ${stockCode} 的市值或涨跌幅数据`);
                 }
-                return parseFloat(data.data.f116) / 1e8; // 转换为亿元
+                return {
+                    currentMarketCap: parseFloat(data.data.f116) / 1e8, // 市值（亿元）
+                    changePercent: parseFloat(data.data.f3) // 涨跌幅（%）
+                };
             } catch (error) {
                 console.error(error.message);
-                return null; // 返回 null 表示获取失败
+                return null;
             }
         }
 
         async function updateTable() {
             const resultDiv = document.getElementById('result');
             const stockData = await Promise.all(stocks.map(async stock => {
-                const currentMarketCap = await fetchMarketCap(stock.code);
-                if (currentMarketCap === null) return null;
+                const marketData = await fetchStockData(stock.code);
+                if (marketData === null) return null;
+
+                const { currentMarketCap, changePercent } = marketData;
                 const upSpace = ((stock.upLimit - currentMarketCap) / currentMarketCap * 100).toFixed(2);
                 const downSpace = ((stock.lowLimit / currentMarketCap - 1) * 100).toFixed(2);
-                return { ...stock, currentMarketCap, upSpace, downSpace };
+
+                return { ...stock, currentMarketCap, upSpace, downSpace, changePercent };
             }));
 
-            // 过滤掉获取失败的股票
             const validData = stockData.filter(item => item !== null);
-
-            // 按向上空间降序排序
             validData.sort((a, b) => parseFloat(b.upSpace) - parseFloat(a.upSpace));
 
-            // 生成表格
-            let tableHTML = '<table><tr><th>股票代码</th><th>股票名称</th><th>当前市值 (亿元)</th><th>向上空间 (%)</th><th>向下空间 (%)</th></tr>';
+            let tableHTML = `
+                <table>
+                    <tr>
+                        <th>股票代码</th>
+                        <th>股票名称</th>
+                        <th>涨跌幅 (%)</th>
+                        <th>当前市值 (亿元)</th>
+                        <th>向上空间 (%)</th>
+                        <th>向下空间 (%)</th>
+                    </tr>`;
+
             validData.forEach(stock => {
+                const color = stock.changePercent >= 0 ? 'red' : 'green';
                 tableHTML += `
                     <tr>
                         <td>${stock.code}</td>
                         <td>${stock.name}</td>
+                        <td style="color:${color};">${stock.changePercent.toFixed(2)}</td>
                         <td>${stock.currentMarketCap.toFixed(2)}</td>
                         <td>${stock.upSpace}</td>
                         <td>${stock.downSpace}</td>
-                    </tr>
-                `;
+                    </tr>`;
             });
+
             tableHTML += '</table>';
             resultDiv.innerHTML = tableHTML;
         }
 
         function startRealtime() {
             if (intervalId) return;
-            updateTable(); // 立即执行一次
-            intervalId = setInterval(updateTable, 2000); // 每2秒更新一次
+            updateTable();
+            intervalId = setInterval(updateTable, 2000);
         }
 
         function stopRealtime() {
             if (intervalId) {
                 clearInterval(intervalId);
                 intervalId = null;
-                document.getElementById('result').innerHTML += '<br>已停止实时更新';
+                document.getElementById('result').innerHTML += '<br><strong>已停止实时更新</strong>';
             }
         }
     </script>
