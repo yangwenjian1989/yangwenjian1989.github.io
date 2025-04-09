@@ -9,17 +9,23 @@
         table { border-collapse: collapse; width: 100%; margin-top: 10px; }
         th, td { border: 1px solid #ddd; padding: 8px; text-align: center; }
         th { background-color: #f2f2f2; }
+        td.hide, th.hide { display: none; }
+        #controls { margin-top: 10px; }
         #result { margin-top: 20px; }
     </style>
 </head>
 <body>
     <h2>股票空间实时表格</h2>
-    <button onclick="startRealtime()">开始实时更新</button>
-    <button onclick="stopRealtime()">停止</button>
+    <div id="controls">
+        <button onclick="startRealtime()">开始实时更新</button>
+        <button onclick="stopRealtime()">停止</button>
+        <button onclick="toggleCodeColumn()">显示/隐藏 股票代码</button>
+    </div>
     <div id="result"></div>
 
     <script>
         let intervalId = null;
+        let showCode = false;
 
         const stocks = [
             { code: "300433.SZ", name: "蓝思科技", lowLimit: 800, upLimit: 1760 },
@@ -35,7 +41,7 @@
         ];
 
         async function fetchStockData(stockCode) {
-            const marketPrefix = stockCode.includes('.SH') || stockCode.includes('.SZ') ? 
+            const marketPrefix = stockCode.includes('.SH') || stockCode.includes('.SZ') ?
                 (stockCode.startsWith('6') ? '1' : '0') : ''; // 沪深市场
             const code = stockCode.replace('.SH', '').replace('.SZ', '').replace('.HK', '');
             const url = `https://push2.eastmoney.com/api/qt/stock/get?secid=${marketPrefix}.${code}`;
@@ -76,7 +82,7 @@
             let tableHTML = `
                 <table>
                     <tr>
-                        <th>股票代码</th>
+                        <th class="${showCode ? '' : 'hide'}">股票代码</th>
                         <th>股票名称</th>
                         <th>涨跌幅 (%)</th>
                         <th>当前市值 (亿元)</th>
@@ -90,7 +96,7 @@
 
                 tableHTML += `
                     <tr>
-                        <td>${stock.code}</td>
+                        <td class="${showCode ? '' : 'hide'}">${stock.code}</td>
                         <td>${stock.name}</td>
                         <td style="color:${color};">${changeDisplay}</td>
                         <td>${stock.currentMarketCap.toFixed(2)}</td>
@@ -101,6 +107,11 @@
 
             tableHTML += '</table>';
             resultDiv.innerHTML = tableHTML;
+        }
+
+        function toggleCodeColumn() {
+            showCode = !showCode;
+            updateTable();
         }
 
         function startRealtime() {
