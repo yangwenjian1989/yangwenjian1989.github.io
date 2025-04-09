@@ -32,7 +32,6 @@
             { code: "000858.SZ", name: "五粮液", lowLimit: 4700, upLimit: 6110 },
             { code: "000333.SZ", name: "美的集团", lowLimit: 4730, upLimit: 6450 },
             { code: "601138.SH", name: "工业富联", lowLimit: 2800, upLimit: 4300 }
-            // 可以添加更多股票
         ];
 
         async function fetchStockData(stockCode) {
@@ -43,13 +42,15 @@
             try {
                 const response = await fetch(url);
                 const data = await response.json();
-                if (!data.data || !data.data.f116 || typeof data.data.f3 === 'undefined') {
-                    throw new Error(`无法获取 ${stockCode} 的市值或涨跌幅数据`);
+
+                if (!data.data || typeof data.data.f116 === 'undefined') {
+                    throw new Error(`无法获取 ${stockCode} 的市值`);
                 }
-                return {
-                    currentMarketCap: parseFloat(data.data.f116) / 1e8, // 市值（亿元）
-                    changePercent: parseFloat(data.data.f3) // 涨跌幅（%）
-                };
+
+                const currentMarketCap = parseFloat(data.data.f116) / 1e8;
+                const changePercent = typeof data.data.f3 === 'number' ? parseFloat(data.data.f3) : null;
+
+                return { currentMarketCap, changePercent };
             } catch (error) {
                 console.error(error.message);
                 return null;
@@ -84,12 +85,14 @@
                     </tr>`;
 
             validData.forEach(stock => {
-                const color = stock.changePercent >= 0 ? 'red' : 'green';
+                const color = stock.changePercent === null ? 'black' : (stock.changePercent >= 0 ? 'red' : 'green');
+                const changeDisplay = stock.changePercent !== null ? stock.changePercent.toFixed(2) : '-';
+
                 tableHTML += `
                     <tr>
                         <td>${stock.code}</td>
                         <td>${stock.name}</td>
-                        <td style="color:${color};">${stock.changePercent.toFixed(2)}</td>
+                        <td style="color:${color};">${changeDisplay}</td>
                         <td>${stock.currentMarketCap.toFixed(2)}</td>
                         <td>${stock.upSpace}</td>
                         <td>${stock.downSpace}</td>
