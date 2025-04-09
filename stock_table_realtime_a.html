@@ -77,7 +77,7 @@
 
         async function fetchStockData(stockCode) {
             const marketPrefix = stockCode.includes('.SH') || stockCode.includes('.SZ') ?
-                (stockCode.startsWith('6') ? '1' : '0') : ''; // 沪深市场
+                (stockCode.startsWith('6') ? '1' : '0') : '';
             const code = stockCode.replace('.SH', '').replace('.SZ', '').replace('.HK', '');
             const url = `https://push2.eastmoney.com/api/qt/stock/get?secid=${marketPrefix}.${code}`;
             try {
@@ -126,14 +126,21 @@
                     </tr>`;
 
             validData.forEach(stock => {
-                const color = stock.changePercent === null ? 'black' : (stock.changePercent >= 0 ? 'red' : 'green');
-                const changeDisplay = stock.changePercent !== null ? stock.changePercent.toFixed(2) : '-';
+                let color = 'black';
+                let fontWeight = 'normal';
+                let changeDisplay = '-';
+
+                if (stock.changePercent !== null) {
+                    color = stock.changePercent >= 0 ? 'red' : 'green';
+                    if (Math.abs(stock.changePercent) >= 5) fontWeight = 'bold';
+                    changeDisplay = stock.changePercent.toFixed(2);
+                }
 
                 tableHTML += `
                     <tr>
                         <td class="${showCode ? '' : 'hide'}">${stock.code}</td>
                         <td>${stock.name}</td>
-                        <td style="color:${color};">${changeDisplay}</td>
+                        <td style="color:${color}; font-weight:${fontWeight};">${changeDisplay}</td>
                         <td>${stock.currentMarketCap.toFixed(2)}</td>
                         <td>${stock.upSpace}</td>
                         <td>${stock.downSpace}</td>
