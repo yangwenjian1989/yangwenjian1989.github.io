@@ -12,7 +12,6 @@
         td.hide, th.hide { display: none; }
         #controls { margin-top: 10px; }
         #result { margin-top: 20px; }
-        #debug { margin-top: 20px; font-size: 12px; max-height: 300px; overflow-y: auto; border: 1px solid #ddd; padding: 10px; }
     </style>
 </head>
 <body>
@@ -23,7 +22,6 @@
         <button onclick="toggleCodeColumn()">显示/隐藏 股票代码</button>
     </div>
     <div id="result"></div>
-    <div id="debug"></div>
 
     <script>
         let intervalId = null;
@@ -31,8 +29,49 @@
 
         const stocks = [
             { code: "300433.SZ", name: "蓝思科技", lowLimit: 800, upLimit: 1760 },
+            { code: "0285.HK", name: "比亚迪电子", lowLimit: 600, upLimit: 1200 },
             { code: "600438.SH", name: "通威股份", lowLimit: 850, upLimit: 1400 },
             { code: "002475.SZ", name: "立讯精密", lowLimit: 2100, upLimit: 3531 },
+            { code: "9896.HK", name: "名创优品", lowLimit: 300, upLimit: 600 },
+            { code: "603179.SH", name: "新泉股份", lowLimit: 200, upLimit: 300 },
+            { code: "002444.SZ", name: "巨星科技", lowLimit: 270, upLimit: 400 },
+            { code: "601689.SH", name: "拓普集团", lowLimit: 777, upLimit: 1200 },
+            { code: "300308.SZ", name: "中际旭创", lowLimit: 554, upLimit: 1200 },
+            { code: "002050.SZ", name: "三花智控", lowLimit: 800, upLimit: 1300 },
+            { code: "688361.SH", name: "中科飞测", lowLimit: 250, upLimit: 400 },
+            { code: "002920.SZ", name: "德赛西威", lowLimit: 550, upLimit: 800 },
+            { code: "002837.SZ", name: "英维克", lowLimit: 174, upLimit: 348 },
+            { code: "300866.SZ", name: "安克创新", lowLimit: 371.2, upLimit: 580 },
+            { code: "603596.SH", name: "伯特利", lowLimit: 300, upLimit: 450 },
+            { code: "300783.SZ", name: "三只松鼠", lowLimit: 94.5, upLimit: 162 },
+            { code: "603501.SH", name: "韦尔股份", lowLimit: 1400, upLimit: 2100 },
+            { code: "300124.SZ", name: "汇川技术", lowLimit: 1400, upLimit: 2400 },
+            { code: "605117.SH", name: "德业股份", lowLimit: 500, upLimit: 750 },
+            { code: "002126.SZ", name: "银轮股份", lowLimit: 160, upLimit: 260 },
+            { code: "688698.SH", name: "伟创电气", lowLimit: 63, upLimit: 126 },
+            { code: "300442.SZ", name: "润泽科技", lowLimit: 800, upLimit: 1200 },
+            { code: "600114.SH", name: "东睦股份", lowLimit: 97.6, upLimit: 146.4 },
+            { code: "0700.HK", name: "腾讯控股", lowLimit: 35000, upLimit: 54439 },
+            { code: "601138.SH", name: "工业富联", lowLimit: 2800, upLimit: 4300 },
+            { code: "002594.SZ", name: "比亚迪", lowLimit: 9000, upLimit: 13000 },
+            { code: "301029.SZ", name: "怡合达", lowLimit: 110, upLimit: 180 },
+            { code: "688305.SH", name: "科德数控", lowLimit: 64.8, upLimit: 99 },
+            { code: "688111.SH", name: "金山办公", lowLimit: 1220, upLimit: 1830 },
+            { code: "601799.SH", name: "星宇股份", lowLimit: 373, upLimit: 450 },
+            { code: "688037.SH", name: "芯源微", lowLimit: 150, upLimit: 250 },
+            { code: "600584.SH", name: "长电科技", lowLimit: 500, upLimit: 700 },
+            { code: "605499.SH", name: "东鹏饮料", lowLimit: 1260, upLimit: 1710 },
+            { code: "688052.SH", name: "纳芯微", lowLimit: 140, upLimit: 280 },
+            { code: "000651.SZ", name: "格力电器", lowLimit: 2420, upLimit: 3080 },
+            { code: "002371.SZ", name: "北方华创", lowLimit: 2200, upLimit: 3000 },
+            { code: "688072.SH", name: "拓荆科技", lowLimit: 408, upLimit: 561 },
+            { code: "000333.SZ", name: "美的集团", lowLimit: 4730, upLimit: 6450 },
+            { code: "000858.SZ", name: "五粮液", lowLimit: 4700, upLimit: 6110 },
+            { code: "600519.SH", name: "贵州茅台", lowLimit: 19000, upLimit: 22800 },
+            { code: "601127.SH", name: "赛力斯", lowLimit: 1700, upLimit: 2380 },
+            { code: "688981.SH", name: "中芯国际", lowLimit: 5590, upLimit: 8385 },
+            { code: "603997.SH", name: "继峰股份", lowLimit: 120, upLimit: 150 },
+            { code: "002847.SZ", name: "盐津铺子", lowLimit: 130, upLimit: 227.5 }
         ];
 
         async function fetchStockData(stockCode) {
@@ -40,9 +79,6 @@
                 (stockCode.startsWith('6') ? '1' : '0') : '';
             const code = stockCode.replace('.SH', '').replace('.SZ', '').replace('.HK', '');
             const url = `https://push2.eastmoney.com/api/qt/stock/get?secid=${marketPrefix}.${code}`;
-            const debugDiv = document.getElementById('debug');
-
-            debugDiv.innerHTML += `<p>尝试请求 ${stockCode}: ${url}</p>`;
             try {
                 const response = await fetch(url);
                 if (!response.ok) {
@@ -50,41 +86,28 @@
                 }
                 const data = await response.json();
 
-                debugDiv.innerHTML += 
-                    `<p>股票 ${stockCode} 返回数据: <pre>${JSON.stringify(data, null, 2)}</pre></p>`;
-
                 if (!data || !data.data || typeof data.data.f116 === 'undefined') {
-                    throw new Error(`无法获取 ${stockCode} 的市值数据`);
+                    return null;
                 }
 
                 const currentMarketCap = parseFloat(data.data.f116) / 1e8; // 总市值（亿元）
                 let changePercent = null;
 
-                // 使用 f43（最新价）和 f60（昨收价）计算涨跌幅
                 if (data.data.f43 !== undefined && data.data.f60 !== undefined && 
                     !isNaN(parseFloat(data.data.f43)) && !isNaN(parseFloat(data.data.f60))) {
                     const currentPrice = parseFloat(data.data.f43) / 100; // 转换为元
                     const yesterdayClose = parseFloat(data.data.f60) / 100; // 转换为元
                     changePercent = ((currentPrice - yesterdayClose) / yesterdayClose * 100).toFixed(2);
-                    debugDiv.innerHTML += `<p>股票 ${stockCode} 涨跌幅: ${changePercent}%</p>`;
-                } else {
-                    debugDiv.innerHTML += 
-                        `<p style="color: orange;">警告: 股票 ${stockCode} 无 f43 或 f60 字段</p>`;
                 }
 
                 return { currentMarketCap, changePercent };
             } catch (error) {
-                debugDiv.innerHTML += 
-                    `<p style="color: red;">错误 - ${stockCode}: ${error.message}</p>`;
                 return null;
             }
         }
 
         async function updateTable() {
             const resultDiv = document.getElementById('result');
-            const debugDiv = document.getElementById('debug');
-            debugDiv.innerHTML = '<h3>调试信息</h3>';
-
             const stockData = await Promise.all(stocks.map(async stock => {
                 const marketData = await fetchStockData(stock.code);
                 if (marketData === null) return null;
