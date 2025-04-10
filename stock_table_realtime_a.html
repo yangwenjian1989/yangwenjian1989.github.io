@@ -12,6 +12,7 @@
         td.hide, th.hide { display: none; }
         #controls { margin-top: 10px; }
         #result { margin-top: 20px; }
+        #debug { margin-top: 20px; font-size: 12px; max-height: 300px; overflow-y: auto; border: 1px solid #ddd; padding: 10px; }
     </style>
 </head>
 <body>
@@ -22,6 +23,7 @@
         <button onclick="toggleCodeColumn()">显示/隐藏 股票代码</button>
     </div>
     <div id="result"></div>
+    <div id="debug"></div>
 
     <script>
         let intervalId = null;
@@ -31,7 +33,7 @@
             { code: "300433.SZ", name: "蓝思科技", lowLimit: 800, upLimit: 1760 },
             { code: "600438.SH", name: "通威股份", lowLimit: 850, upLimit: 1400 },
             { code: "002475.SZ", name: "立讯精密", lowLimit: 2100, upLimit: 3531 },
-            // 为简化测试，只保留几只A股股票，你可以添加更多
+            // 你可以添加更多股票
         ];
 
         async function fetchStockData(stockCode) {
@@ -42,30 +44,37 @@
             try {
                 const response = await fetch(url);
                 const data = await response.json();
-                console.log(`股票 ${stockCode} 返回数据:`, data); // 调试输出完整数据
+
+                // 将返回数据添加到调试区域
+                document.getElementById('debug').innerHTML += 
+                    `<p>股票 ${stockCode} 返回数据: ${JSON.stringify(data, null, 2)}</p>`;
 
                 if (!data.data || typeof data.data.f116 === 'undefined') {
                     throw new Error(`无法获取 ${stockCode} 的市值`);
                 }
 
                 const currentMarketCap = parseFloat(data.data.f116) / 1e8;
-                // 检查可能的涨跌幅字段：f3 或其他
                 let changePercent = null;
                 if (data.data.f3 !== undefined && !isNaN(parseFloat(data.data.f3))) {
                     changePercent = parseFloat(data.data.f3) / 100; // f3 单位为 0.01%
                 } else {
-                    console.warn(`股票 ${stockCode} 无 f3 字段，检查其他字段`);
+                    document.getElementById('debug').innerHTML += 
+                        `<p style="color: orange;">警告: 股票 ${stockCode} 无 f3 字段</p>`;
                 }
 
                 return { currentMarketCap, changePercent };
             } catch (error) {
-                console.error(`错误 - ${stockCode}:`, error.message);
+                document.getElementById('debug').innerHTML += 
+                    `<p style="color: red;">错误 - ${stockCode}: ${error.message}</p>`;
                 return null;
             }
         }
 
         async function updateTable() {
             const resultDiv = document.getElementById('result');
+            // 清空调试区域（可选，如果你想每次刷新都只显示最新数据）
+            document.getElementById('debug').innerHTML = '<h3>调试信息</h3>';
+
             const stockData = await Promise.all(stocks.map(async stock => {
                 const marketData = await fetchStockData(stock.code);
                 if (marketData === null) return null;
