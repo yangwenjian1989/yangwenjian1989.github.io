@@ -74,7 +74,6 @@
             { code: "002847.SZ", name: "盐津铺子", lowLimit: 130, upLimit: 227.5 }
         ];
 
-
         async function fetchStockData(stockCode) {
             const marketPrefix = stockCode.includes('.SH') || stockCode.includes('.SZ') ?
                 (stockCode.startsWith('6') ? '1' : '0') : '';
@@ -89,7 +88,10 @@
                 }
 
                 const currentMarketCap = parseFloat(data.data.f116) / 1e8;
-                const changePercent = typeof data.data.f3 === 'number' ? parseFloat(data.data.f3) : null;
+                // 检查 f3 是否存在且为有效数字，若无效则返回 null
+                const changePercent = (data.data.f3 !== undefined && !isNaN(parseFloat(data.data.f3))) 
+                    ? parseFloat(data.data.f3) / 100  // f3 是涨跌幅，单位为 0.01%，需除以 100
+                    : null;
 
                 return { currentMarketCap, changePercent };
             } catch (error) {
@@ -133,7 +135,7 @@
                 if (stock.changePercent !== null) {
                     color = stock.changePercent >= 0 ? 'red' : 'green';
                     if (Math.abs(stock.changePercent) >= 5) fontWeight = 'bold';
-                    changeDisplay = stock.changePercent.toFixed(2);
+                    changeDisplay = stock.changePercent.toFixed(2); // 显示两位小数
                 }
 
                 tableHTML += `
