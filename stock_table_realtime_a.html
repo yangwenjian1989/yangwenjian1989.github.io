@@ -57,27 +57,19 @@
                     throw new Error(`无法获取 ${stockCode} 的市值数据`);
                 }
 
-                const currentMarketCap = parseFloat(data.data.f116) / 1e8;
+                const currentMarketCap = parseFloat(data.data.f116) / 1e8; // 总市值（亿元）
                 let changePercent = null;
 
-                // 优先检查 f170（涨跌额）和 f46（昨收价）计算涨跌幅
-                if (data.data.f170 !== undefined && data.data.f46 !== undefined && 
-                    !isNaN(parseFloat(data.data.f170)) && !isNaN(parseFloat(data.data.f46))) {
-                    const changeAmount = parseFloat(data.data.f170);
-                    const yesterdayClose = parseFloat(data.data.f46);
-                    changePercent = (changeAmount / yesterdayClose * 100).toFixed(2);
-                    debugDiv.innerHTML += `<p>股票 ${stockCode} 使用 f170 计算涨跌幅: ${changePercent}%</p>`;
-                }
-                // 如果没有 f170，则用 f43（最新价）和 f46（昨收价）计算
-                else if (data.data.f43 !== undefined && data.data.f46 !== undefined && 
-                    !isNaN(parseFloat(data.data.f43)) && !isNaN(parseFloat(data.data.f46))) {
-                    const currentPrice = parseFloat(data.data.f43);
-                    const yesterdayClose = parseFloat(data.data.f46);
+                // 使用 f43（最新价）和 f60（昨收价）计算涨跌幅
+                if (data.data.f43 !== undefined && data.data.f60 !== undefined && 
+                    !isNaN(parseFloat(data.data.f43)) && !isNaN(parseFloat(data.data.f60))) {
+                    const currentPrice = parseFloat(data.data.f43) / 100; // 转换为元
+                    const yesterdayClose = parseFloat(data.data.f60) / 100; // 转换为元
                     changePercent = ((currentPrice - yesterdayClose) / yesterdayClose * 100).toFixed(2);
-                    debugDiv.innerHTML += `<p>股票 ${stockCode} 使用 f43 和 f46 计算涨跌幅: ${changePercent}%</p>`;
+                    debugDiv.innerHTML += `<p>股票 ${stockCode} 涨跌幅: ${changePercent}%</p>`;
                 } else {
                     debugDiv.innerHTML += 
-                        `<p style="color: orange;">警告: 股票 ${stockCode} 无可用涨跌幅字段</p>`;
+                        `<p style="color: orange;">警告: 股票 ${stockCode} 无 f43 或 f60 字段</p>`;
                 }
 
                 return { currentMarketCap, changePercent };
