@@ -20,12 +20,14 @@
         <button onclick="startRealtime()">开始实时更新</button>
         <button onclick="stopRealtime()">停止</button>
         <button onclick="toggleCodeColumn()">显示/隐藏 股票代码</button>
+        <button onclick="filterStocks()">筛选股票</button>
     </div>
     <div id="result"></div>
 
     <script>
         let intervalId = null;
         let showCode = false;
+        let isFiltered = false;
 
         const stocks = [
             { code: "300433.SZ", name: "蓝思科技", lowLimit: 800, upLimit: 1760 },
@@ -90,13 +92,13 @@
                     return null;
                 }
 
-                const currentMarketCap = parseFloat(data.data.f116) / 1e8; // 总市值（亿元）
+                const currentMarketCap = parseFloat(data.data.f116) / 1e8;
                 let changePercent = null;
 
                 if (data.data.f43 !== undefined && data.data.f60 !== undefined && 
                     !isNaN(parseFloat(data.data.f43)) && !isNaN(parseFloat(data.data.f60))) {
-                    const currentPrice = parseFloat(data.data.f43) / 100; // 转换为元
-                    const yesterdayClose = parseFloat(data.data.f60) / 100; // 转换为元
+                    const currentPrice = parseFloat(data.data.f43) / 100;
+                    const yesterdayClose = parseFloat(data.data.f60) / 100;
                     changePercent = ((currentPrice - yesterdayClose) / yesterdayClose * 100).toFixed(2);
                 }
 
@@ -119,7 +121,18 @@
                 return { ...stock, currentMarketCap, upSpace, downSpace, changePercent };
             }));
 
-            const validData = stockData.filter(item => item !== null);
+            let validData = stockData.filter(item => item !== null);
+
+            // 筛选逻辑
+            if (isFiltered) {
+                validData = validData.filter(stock => {
+                    const downSpaceValue = parseFloat(stock.downSpace);
+                    const upSpaceValue = parseFloat(stock.upSpace);
+                    const ratio = Math.abs(upSpaceValue / downSpaceValue);
+                    return downSpaceValue > -20 && ratio > 2;
+                });
+            }
+
             validData.sort((a, b) => parseFloat(b.upSpace) - parseFloat(a.upSpace));
 
             let tableHTML = `
@@ -133,27 +146,31 @@
                         <th>向下空间 (%)</th>
                     </tr>`;
 
-            validData.forEach(stock => {
-                let color = 'black';
-                let fontWeight = 'normal';
-                let changeDisplay = '-';
+            if (validData.length === 0) {
+                tableHTML += '<tr><td colspan="6">没有符合条件的股票</td></tr>';
+            } else {
+                validData.forEach(stock => {
+                    let color = 'black';
+                    let fontWeight = 'normal';
+                    let changeDisplay = '-';
 
-                if (stock.changePercent !== null) {
-                    color = stock.changePercent >= 0 ? 'red' : 'green';
-                    if (Math.abs(stock.changePercent) >= 5) fontWeight = 'bold';
-                    changeDisplay = stock.changePercent;
-                }
+                    if (stock.changePercent !== null) {
+                        color = stock.changePercent >= 0 ? 'red' : 'green';
+                        if (Math.abs(stock.changePercent) >= 5) fontWeight = 'bold';
+                        changeDisplay = stock.changePercent;
+                    }
 
-                tableHTML += `
-                    <tr>
-                        <td class="${showCode ? '' : 'hide'}">${stock.code}</td>
-                        <td>${stock.name}</td>
-                        <td style="color:${color}; font-weight:${fontWeight};">${changeDisplay}</td>
-                        <td>${stock.currentMarketCap.toFixed(2)}</td>
-                        <td>${stock.upSpace}</td>
-                        <td>${stock.downSpace}</td>
-                    </tr>`;
-            });
+                    tableHTML += `
+                        <tr>
+                            <td class="${showCode ? '' : 'hide'}">${stock.code}</td>
+                            <td>${stock.name}</td>
+                            <td style="color:${color}; font-weight:${fontWeight};">${changeDisplay}</td>
+                            <td>${stock.currentMarketCap.toFixed(2)}</td>
+                            <td>${stock.upSpace}</td>
+                            <td>${stock.downSpace}</td>
+                        </tr>`;
+                });
+            }
 
             tableHTML += '</table>';
             resultDiv.innerHTML = tableHTML;
@@ -162,6 +179,12 @@
         function toggleCodeColumn() {
             showCode = !showCode;
             updateTable();
+        }
+
+        function filterStocks() {
+            isFiltered = !isFiltered;
+            updateTable();
+            document.getElementById('result').innerHTML += `<br><strong>${isFiltered ? '已应用筛选条件' : '已取消筛选'}</strong>`;
         }
 
         function startRealtime() {
