@@ -125,7 +125,7 @@
 
                 const { currentMarketCap, changePercent } = marketData;
                 const upSpace = ((stock.upLimit - currentMarketCap) / currentMarketCap * 100).toFixed(2);
-                const downSpace = ((stock.stock.lowLimit / currentMarketCap - 1) * 100).toFixed(2);
+                const downSpace = ((stock.lowLimit / currentMarketCap - 1) * 100).toFixed(2);
 
                 return { ...stock, currentMarketCap, upSpace, downSpace, changePercent };
             }));
