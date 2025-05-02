@@ -7,9 +7,10 @@
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; }
         table { border-collapse: collapse; width: 100%; margin-top: 10px; }
-        th, td { border: 1px solid #ddd; padding: 8px; text-align: center; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: center; font-size: 14px; }
         th { background-color: #f2f2f2; }
         td.hide, th.hide { display: none; }
+        td.stock-name { white-space: nowrap; }
         #controls { margin-top: 10px; }
         #result { margin-top: 20px; }
     </style>
@@ -84,8 +85,6 @@
             { code: "002847.SZ", name: "盐津铺子", lowLimit: 134, upLimit: 234.5 }
         ];
 
-
-
         async function fetchStockData(stockCode) {
             const marketPrefix = stockCode.includes('.SH') || stockCode.includes('.SZ') ?
                 (stockCode.startsWith('6') ? '1' : '0') : '';
@@ -126,7 +125,7 @@
 
                 const { currentMarketCap, changePercent } = marketData;
                 const upSpace = ((stock.upLimit - currentMarketCap) / currentMarketCap * 100).toFixed(2);
-                const downSpace = ((stock.lowLimit / currentMarketCap - 1) * 100).toFixed(2);
+                const downSpace = ((stock.stock.lowLimit / currentMarketCap - 1) * 100).toFixed(2);
 
                 return { ...stock, currentMarketCap, upSpace, downSpace, changePercent };
             }));
@@ -173,7 +172,7 @@
                     tableHTML += `
                         <tr>
                             <td class="${showCode ? '' : 'hide'}">${stock.code}</td>
-                            <td>${stock.name}</td>
+                            <td class="stock-name">${stock.name}</td>
                             <td style="color:${color}; font-weight:${fontWeight};">${changeDisplay}</td>
                             <td>${stock.currentMarketCap.toFixed(2)}</td>
                             <td>${stock.upSpace}</td>
