@@ -22,6 +22,7 @@
         <button onclick="stopRealtime()">停止</button>
         <button onclick="toggleCodeColumn()">显示/隐藏 股票代码</button>
         <button onclick="filterStocks()">筛选股票</button>
+        <button onclick="sortByChange()">按涨跌幅排序</button>
     </div>
     <div id="result"></div>
 
@@ -29,6 +30,7 @@
         let intervalId = null;
         let showCode = false;
         let isFiltered = false;
+        let sortByChangePercent = false;
 
         const stocks = [
             { code: "600438.SH", name: "通威股份", lowLimit: 850, upLimit: 1400 },
@@ -145,7 +147,16 @@
                 });
             }
 
-            validData.sort((a, b) => parseFloat(b.upSpace) - parseFloat(a.upSpace));
+            // 排序逻辑
+            if (sortByChangePercent) {
+                validData.sort((a, b) => {
+                    const aChange = a.changePercent === null ? -Infinity : parseFloat(a.changePercent);
+                    const bChange = b.changePercent === null ? -Infinity : parseFloat(b.changePercent);
+                    return bChange - aChange;
+                });
+            } else {
+                validData.sort((a, b) => parseFloat(b.upSpace) - parseFloat(a.upSpace));
+            }
 
             let tableHTML = `
                 <table>
@@ -197,6 +208,12 @@
             isFiltered = !isFiltered;
             updateTable();
             document.getElementById('result').innerHTML += `<br><strong>${isFiltered ? '已应用筛选条件' : '已取消筛选'}</strong>`;
+        }
+
+        function sortByChange() {
+            sortByChangePercent = !sortByChangePercent;
+            updateTable();
+            document.getElementById('result').innerHTML += `<br><strong>${sortByChangePercent ? '已按涨跌幅排序' : '已恢复默认排序'}</strong>`;
         }
 
         function startRealtime() {
