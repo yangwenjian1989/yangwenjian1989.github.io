@@ -1,120 +1,38 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>股票空间实时表格</title>
-  <link href="https://fonts.googleapis.com/css2?family=Roboto&display=swap" rel="stylesheet">
-  <style>
-    body {
-      font-family: 'Roboto', -apple-system, BlinkMacSystemFont, sans-serif;
-      background-color: #f9fbfd;
-      color: #333;
-      padding: 20px;
-      margin: 0;
-    }
-
-    h2 {
-      text-align: center;
-      color: #2c3e50;
-    }
-
-    #controls {
-      text-align: center;
-      margin: 20px 0;
-    }
-
-    button {
-      background-color: #4a90e2;
-      color: white;
-      border: none;
-      padding: 10px 16px;
-      margin: 5px;
-      border-radius: 6px;
-      cursor: pointer;
-      font-size: 14px;
-      transition: background-color 0.3s ease;
-    }
-
-    button:hover {
-      background-color: #3b7dc4;
-    }
-
-    table {
-      border-collapse: collapse;
-      width: 100%;
-      background-color: white;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
-      border-radius: 8px;
-      overflow: hidden;
-    }
-
-    th, td {
-      padding: 12px 10px;
-      text-align: center;
-      border-bottom: 1px solid #e8edf3;
-      font-size: 14px;
-    }
-
-    th {
-      background-color: #eef4fb;
-      font-weight: 600;
-      color: #34495e;
-    }
-
-    td.stock-name {
-      white-space: nowrap;
-      font-weight: 500;
-      color: #2c3e50;
-    }
-
-    td.hide, th.hide {
-      display: none;
-    }
-
-    tr:hover {
-      background-color: #f1f7fd;
-    }
-
-    td.positive {
-      color: #e74c3c;
-      font-weight: 600;
-    }
-
-    td.negative {
-      color: #27ae60;
-      font-weight: 600;
-    }
-
-    td.bold-change {
-      font-weight: bold;
-      background-color: #fff4e1;
-      transition: background-color 0.3s;
-    }
-
-    #result {
-      margin-top: 20px;
-    }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>股票空间实时表格</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        table { border-collapse: collapse; width: 100%; margin-top: 10px; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: center; font-size: 14px; }
+        th { background-color: #f2f2f2; }
+        td.hide, th.hide { display: none; }
+        td.stock-name { white-space: nowrap; }
+        #controls { margin-top: 10px; }
+        #result { margin-top: 20px; }
+    </style>
 </head>
 <body>
-  <h2>股票空间实时表格</h2>
-  <div id="controls">
-    <button onclick="startRealtime()">开始实时更新</button>
-    <button onclick="stopRealtime()">停止</button>
-    <button onclick="toggleCodeColumn()">显示/隐藏 股票代码</button>
-    <button onclick="filterStocks()">筛选股票</button>
-    <button onclick="sortByChange()">按涨跌幅排序</button>
-  </div>
-  <div id="result"></div>
+    <h2>股票空间实时表格</h2>
+    <div id="controls">
+        <button onclick="startRealtime()">开始实时更新</button>
+        <button onclick="stopRealtime()">停止</button>
+        <button onclick="toggleCodeColumn()">显示/隐藏 股票代码</button>
+        <button onclick="filterStocks()">筛选股票</button>
+        <button onclick="sortByChange()">按涨跌幅排序</button>
+    </div>
+    <div id="result"></div>
 
-  <script>
-    let intervalId = null;
-    let showCode = false;
-    let isFiltered = false;
-    let sortByChangePercent = false;
+    <script>
+        let intervalId = null;
+        let showCode = false;
+        let isFiltered = false;
+        let sortByChangePercent = false;
 
-    const stocks = [
+        const stocks = [
           { code: "688361.SH", name: "中科飞测", lowLimit: 262.5, upLimit: 420 },
           { code: "002594.SZ", name: "比亚迪", lowLimit: 9800, upLimit: 14700 },
           { code: "1810.HK", name: "小米集团-W", lowLimit: 13800, upLimit: 20700 },
@@ -186,141 +104,146 @@
           { code: "600114.SH", name: "东睦股份", lowLimit: 110, upLimit: 155 },
           { code: "601138.SH", name: "工业富联", lowLimit: 3965, upLimit: 6710 },
         ];
-    
-    // 略去中间的stocks数组（太长），直接粘贴你的stocks内容即可，这里留作说明
 
-    async function fetchStockData(stockCode) {
-      const marketPrefix = stockCode.includes('.SH') || stockCode.includes('.SZ') ?
-        (stockCode.startsWith('6') ? '1' : '0') : '';
-      const code = stockCode.replace('.SH', '').replace('.SZ', '').replace('.HK', '');
-      const url = `https://push2.eastmoney.com/api/qt/stock/get?secid=${marketPrefix}.${code}`;
-      try {
-        const response = await fetch(url);
-        if (!response.ok) throw new Error(`HTTP 错误: ${response.status}`);
-        const data = await response.json();
-        if (!data || !data.data || typeof data.data.f116 === 'undefined') return null;
+        async function fetchStockData(stockCode) {
+            const marketPrefix = stockCode.includes('.SH') || stockCode.includes('.SZ') ?
+                (stockCode.startsWith('6') ? '1' : '0') : '';
+            const code = stockCode.replace('.SH', '').replace('.SZ', '').replace('.HK', '');
+            const url = `https://push2.eastmoney.com/api/qt/stock/get?secid=${marketPrefix}.${code}`;
+            try {
+                const response = await fetch(url);
+                if (!response.ok) {
+                    throw new Error(`HTTP 错误: ${response.status}`);
+                }
+                const data = await response.json();
 
-        const currentMarketCap = parseFloat(data.data.f116) / 1e8;
-        let changePercent = null;
+                if (!data || !data.data || typeof data.data.f116 === 'undefined') {
+                    return null;
+                }
 
-        if (data.data.f43 !== undefined && data.data.f60 !== undefined &&
-          !isNaN(parseFloat(data.data.f43)) && !isNaN(parseFloat(data.data.f60))) {
-          const currentPrice = parseFloat(data.data.f43) / 100;
-          const yesterdayClose = parseFloat(data.data.f60) / 100;
-          changePercent = ((currentPrice - yesterdayClose) / yesterdayClose * 100).toFixed(2);
+                const currentMarketCap = parseFloat(data.data.f116) / 1e8;
+                let changePercent = null;
+
+                if (data.data.f43 !== undefined && data.data.f60 !== undefined && 
+                    !isNaN(parseFloat(data.data.f43)) && !isNaN(parseFloat(data.data.f60))) {
+                    const currentPrice = parseFloat(data.data.f43) / 100;
+                    const yesterdayClose = parseFloat(data.data.f60) / 100;
+                    changePercent = ((currentPrice - yesterdayClose) / yesterdayClose * 100).toFixed(2);
+                }
+
+                return { currentMarketCap, changePercent };
+            } catch (error) {
+                return null;
+            }
         }
 
-        return { currentMarketCap, changePercent };
-      } catch (error) {
-        return null;
-      }
-    }
+        async function updateTable() {
+            const resultDiv = document.getElementById('result');
+            const stockData = await Promise.all(stocks.map(async stock => {
+                const marketData = await fetchStockData(stock.code);
+                if (marketData === null) return null;
 
-    async function updateTable() {
-      const resultDiv = document.getElementById('result');
-      const stockData = await Promise.all(stocks.map(async stock => {
-        const marketData = await fetchStockData(stock.code);
-        if (marketData === null) return null;
+                const { currentMarketCap, changePercent } = marketData;
+                const upSpace = ((stock.upLimit - currentMarketCap) / currentMarketCap * 100).toFixed(2);
+                const downSpace = ((stock.lowLimit / currentMarketCap - 1) * 100).toFixed(2);
 
-        const { currentMarketCap, changePercent } = marketData;
-        const upSpace = ((stock.upLimit - currentMarketCap) / currentMarketCap * 100).toFixed(2);
-        const downSpace = ((stock.lowLimit / currentMarketCap - 1) * 100).toFixed(2);
+                return { ...stock, currentMarketCap, upSpace, downSpace, changePercent };
+            }));
 
-        return { ...stock, currentMarketCap, upSpace, downSpace, changePercent };
-      }));
+            let validData = stockData.filter(item => item !== null);
 
-      let validData = stockData.filter(item => item !== null);
+            // 筛选逻辑
+            if (isFiltered) {
+                validData = validData.filter(stock => {
+                    const downSpaceValue = parseFloat(stock.downSpace);
+                    const upSpaceValue = parseFloat(stock.upSpace);
+                    const ratio = Math.abs(upSpaceValue / downSpaceValue);
+                    return downSpaceValue > -20 && ratio > 2;
+                });
+            }
 
-      if (isFiltered) {
-        validData = validData.filter(stock => {
-          const downSpaceValue = parseFloat(stock.downSpace);
-          const upSpaceValue = parseFloat(stock.upSpace);
-          const ratio = Math.abs(upSpaceValue / downSpaceValue);
-          return downSpaceValue > -20 && ratio > 2;
-        });
-      }
+            // 排序逻辑
+            if (sortByChangePercent) {
+                validData.sort((a, b) => {
+                    const aChange = a.changePercent === null ? -Infinity : parseFloat(a.changePercent);
+                    const bChange = b.changePercent === null ? -Infinity : parseFloat(b.changePercent);
+                    return bChange - aChange;
+                });
+            } else {
+                validData.sort((a, b) => parseFloat(b.upSpace) - parseFloat(a.upSpace));
+            }
 
-      if (sortByChangePercent) {
-        validData.sort((a, b) => {
-          const aChange = a.changePercent === null ? -Infinity : parseFloat(a.changePercent);
-          const bChange = b.changePercent === null ? -Infinity : parseFloat(b.changePercent);
-          return bChange - aChange;
-        });
-      } else {
-        validData.sort((a, b) => parseFloat(b.upSpace) - parseFloat(a.upSpace));
-      }
+            let tableHTML = `
+                <table>
+                    <tr>
+                        <th class="${showCode ? '' : 'hide'}">股票代码</th>
+                        <th>股票名称</th>
+                        <th>涨跌幅 (%)</th>
+                        <th>当前市值 (亿元)</th>
+                        <th>向上空间 (%)</th>
+                        <th>向下空间 (%)</th>
+                    </tr>`;
 
-      let tableHTML = `
-        <table>
-          <tr>
-            <th class="${showCode ? '' : 'hide'}">股票代码</th>
-            <th>股票名称</th>
-            <th>涨跌幅 (%)</th>
-            <th>当前市值 (亿元)</th>
-            <th>向上空间 (%)</th>
-            <th>向下空间 (%)</th>
-          </tr>`;
+            if (validData.length === 0) {
+                tableHTML += '<tr><td colspan="6">没有符合条件的股票</td></tr>';
+            } else {
+                validData.forEach(stock => {
+                    let color = 'black';
+                    let fontWeight = 'normal';
+                    let changeDisplay = '-';
 
-      if (validData.length === 0) {
-        tableHTML += '<tr><td colspan="6">没有符合条件的股票</td></tr>';
-      } else {
-        validData.forEach(stock => {
-          let changeDisplay = '-';
-          let classes = '';
+                    if (stock.changePercent !== null) {
+                        color = stock.changePercent >= 0 ? 'red' : 'green';
+                        if (Math.abs(stock.changePercent) >= 5) fontWeight = 'bold';
+                        changeDisplay = stock.changePercent;
+                    }
 
-          if (stock.changePercent !== null) {
-            const change = parseFloat(stock.changePercent);
-            classes += change >= 0 ? 'positive' : 'negative';
-            if (Math.abs(change) >= 5) classes += ' bold-change';
-            changeDisplay = stock.changePercent;
-          }
+                    tableHTML += `
+                        <tr>
+                            <td class="${showCode ? '' : 'hide'}">${stock.code}</td>
+                            <td class="stock-name">${stock.name}</td>
+                            <td style="color:${color}; font-weight:${fontWeight};">${changeDisplay}</td>
+                            <td>${stock.currentMarketCap.toFixed(2)}</td>
+                            <td>${stock.upSpace}</td>
+                            <td>${stock.downSpace}</td>
+                        </tr>`;
+                });
+            }
 
-          tableHTML += `
-            <tr>
-              <td class="${showCode ? '' : 'hide'}">${stock.code}</td>
-              <td class="stock-name">${stock.name}</td>
-              <td class="${classes}">${changeDisplay}</td>
-              <td>${stock.currentMarketCap.toFixed(2)}</td>
-              <td>${stock.upSpace}</td>
-              <td>${stock.downSpace}</td>
-            </tr>`;
-        });
-      }
+            tableHTML += '</table>';
+            resultDiv.innerHTML = tableHTML;
+        }
 
-      tableHTML += '</table>';
-      resultDiv.innerHTML = tableHTML;
-    }
+        function toggleCodeColumn() {
+            showCode = !showCode;
+            updateTable();
+        }
 
-    function toggleCodeColumn() {
-      showCode = !showCode;
-      updateTable();
-    }
+        function filterStocks() {
+            isFiltered = !isFiltered;
+            updateTable();
+            document.getElementById('result').innerHTML += `<br><strong>${isFiltered ? '已应用筛选条件' : '已取消筛选'}</strong>`;
+        }
 
-    function filterStocks() {
-      isFiltered = !isFiltered;
-      updateTable();
-      document.getElementById('result').innerHTML += `<br><strong>${isFiltered ? '已应用筛选条件' : '已取消筛选'}</strong>`;
-    }
+        function sortByChange() {
+            sortByChangePercent = !sortByChangePercent;
+            updateTable();
+            document.getElementById('result').innerHTML += `<br><strong>${sortByChangePercent ? '已按涨跌幅排序' : '已恢复默认排序'}</strong>`;
+        }
 
-    function sortByChange() {
-      sortByChangePercent = !sortByChangePercent;
-      updateTable();
-      document.getElementById('result').innerHTML += `<br><strong>${sortByChangePercent ? '已按涨跌幅排序' : '已恢复默认排序'}</strong>`;
-    }
+        function startRealtime() {
+            if (intervalId) return;
+            updateTable();
+            intervalId = setInterval(updateTable, 2000);
+        }
 
-    function startRealtime() {
-      if (intervalId) return;
-      updateTable();
-      intervalId = setInterval(updateTable, 2000);
-    }
-
-    function stopRealtime() {
-      if (intervalId) {
-        clearInterval(intervalId);
-        intervalId = null;
-        document.getElementById('result').innerHTML += '<br><strong>已停止实时更新</strong>';
-      }
-    }
-  </script>
+        function stopRealtime() {
+            if (intervalId) {
+                clearInterval(intervalId);
+                intervalId = null;
+                document.getElementById('result').innerHTML += '<br><strong>已停止实时更新</strong>';
+            }
+        }
+    </script>
 </body>
 </html>
