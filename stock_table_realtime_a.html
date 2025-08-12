@@ -13,6 +13,7 @@
         td.stock-name { white-space: nowrap; }
         #controls { margin-top: 10px; }
         #result { margin-top: 20px; }
+        .error { color: red; font-weight: bold; }
     </style>
 </head>
 <body>
@@ -31,7 +32,6 @@
         let showCode = false;
         let isFiltered = false;
         let sortByChangePercent = false;
-        let yahooCache = {}; // 存港美股数据缓存
 
         const stocks = [
           { code: "688361.SH", name: "中科飞测", lowLimit: 262.5, upLimit: 420 },
@@ -106,68 +106,51 @@
           { code: "601138.SH", name: "工业富联", lowLimit: 3965, upLimit: 6710 },
         ];
 
-        // 批量获取港美股数据
-        async function fetchYahooFinanceData(symbols) {
-            const url = `https://query1.finance.yahoo.com/v7/finance/quote?symbols=${symbols.join(",")}`;
-            try {
-                const res = await fetch(url);
-                if (!res.ok) throw new Error("Yahoo Finance 请求失败");
-                const data = await res.json();
-                data.quoteResponse.result.forEach(item => {
-                    yahooCache[item.symbol] = {
-                        currentMarketCap: item.marketCap ? item.marketCap / 1e8 : null, // 亿
-                        changePercent: item.regularMarketChangePercent ?? null
-                    };
-                });
-            } catch (err) {
-                console.error("Yahoo Finance 请求错误:", err);
+        // 获取 secid
+        function getSecid(stockCode) {
+            let prefix, scode;
+            if (stockCode.endsWith('.SH')) {
+                prefix = '1';
+                scode = stockCode.replace('.SH', '');
+            } else if (stockCode.endsWith('.SZ')) {
+                prefix = '0';
+                scode = stockCode.replace('.SZ', '');
+            } else if (stockCode.endsWith('.HK')) {
+                prefix = '116';
+                scode = stockCode.replace('.HK', '').padStart(5, '0');
+            } else {
+                // 假设美股 NASDAQ
+                prefix = '105';
+                scode = stockCode;
             }
+            return `${prefix}.${scode}`;
         }
 
-        // 获取单只股票数据
+        // 获取单只股票数据（统一使用东方财富 API）
         async function fetchStockData(stockCode) {
-            if (stockCode.includes(".SH") || stockCode.includes(".SZ")) {
-                // A股走东方财富
-                const marketPrefix = stockCode.startsWith("6") ? "1" : "0";
-                const code = stockCode.replace(".SH", "").replace(".SZ", "");
-                const url = `https://push2.eastmoney.com/api/qt/stock/get?secid=${marketPrefix}.${code}`;
-                try {
-                    const response = await fetch(url);
-                    const data = await response.json();
-                    if (!data || !data.data || typeof data.data.f116 === "undefined") return null;
-                    const currentMarketCap = parseFloat(data.data.f116) / 1e8;
-                    let changePercent = null;
-                    if (data.data.f43 && data.data.f60) {
-                        const currentPrice = parseFloat(data.data.f43) / 100;
-                        const yesterdayClose = parseFloat(data.data.f60) / 100;
-                        changePercent = ((currentPrice - yesterdayClose) / yesterdayClose * 100).toFixed(2);
-                    }
-                    return { currentMarketCap, changePercent };
-                } catch {
-                    return null;
+            const secid = getSecid(stockCode);
+            if (!secid) return null;
+            const url = `https://push2.eastmoney.com/api/qt/stock/get?secid=${secid}`;
+            try {
+                const response = await fetch(url);
+                const data = await response.json();
+                if (!data || !data.data || typeof data.data.f116 === "undefined") return null;
+                const currentMarketCap = parseFloat(data.data.f116) / 1e8; // 亿元（保持原单位）
+                let changePercent = null;
+                if (data.data.f43 && data.data.f60) {
+                    const currentPrice = parseFloat(data.data.f43) / 100;
+                    const yesterdayClose = parseFloat(data.data.f60) / 100;
+                    changePercent = ((currentPrice - yesterdayClose) / yesterdayClose * 100).toFixed(2);
                 }
-            } else if (stockCode.includes(".HK") || stockCode.includes(".O")) {
-                // 港美股走 Yahoo Finance 缓存
-                const data = yahooCache[stockCode];
-                if (!data || data.currentMarketCap === null) return null;
-                return {
-                    currentMarketCap: data.currentMarketCap,
-                    changePercent: data.changePercent !== null ? data.changePercent.toFixed(2) : null
-                };
+                return { currentMarketCap, changePercent };
+            } catch (err) {
+                console.error(`东方财富请求错误 (${stockCode}):`, err);
+                return null;
             }
-            return null;
         }
 
         // 更新表格
         async function updateTable() {
-            // 先批量更新港美股数据
-            const hkUsSymbols = stocks
-                .map(s => s.code)
-                .filter(c => c.includes(".HK") || c.includes(".O"));
-            if (hkUsSymbols.length > 0) {
-                await fetchYahooFinanceData(hkUsSymbols);
-            }
-
             const resultDiv = document.getElementById('result');
             const stockData = await Promise.all(stocks.map(async stock => {
                 const marketData = await fetchStockData(stock.code);
@@ -218,9 +201,9 @@
                     let fontWeight = 'normal';
                     let changeDisplay = '-';
                     if (stock.changePercent !== null) {
-                        color = stock.changePercent >= 0 ? 'red' : 'green';
-                        if (Math.abs(stock.changePercent) >= 5) fontWeight = 'bold';
                         changeDisplay = stock.changePercent;
+                        color = parseFloat(stock.changePercent) >= 0 ? 'red' : 'green';
+                        if (Math.abs(parseFloat(stock.changePercent)) >= 5) fontWeight = 'bold';
                     }
                     tableHTML += `
                         <tr>
