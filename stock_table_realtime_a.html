@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>股票空间实时表格</title>
+    <title>实时表格</title>
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; }
         table { border-collapse: collapse; width: 100%; margin-top: 10px; }
@@ -17,7 +17,7 @@
     </style>
 </head>
 <body>
-    <h2>股票空间实时表格</h2>
+    <h2>实时表格</h2>
     <div id="controls">
         <button onclick="startRealtime()">开始实时更新</button>
         <button onclick="stopRealtime()">停止</button>
@@ -68,11 +68,11 @@
           { code: "002475.SZ", name: "立讯精密", lowLimit: 2275, upLimit: 3575 },
           { code: "9985.HK", name: "卫龙美味", lowLimit: 272, upLimit: 400 },
           { code: "002126.SZ", name: "银轮股份", lowLimit: 242, upLimit: 385 },
-          { code: "301029.SZ", name: "怡合达", lowLimit: 135, upLimit: 210 },
+          { code: "301029.SZ", name: "怡合达", lowLimit: 156.8, upLimit: 224 },
           { code: "688208.SH", name: "道通科技", lowLimit: 200, upLimit: 300 },
           { code: "600276.SH", name: "恒瑞医药", lowLimit: 3650, upLimit: 5110 },
           { code: "002138.SZ", name: "顺络电子", lowLimit: 234, upLimit: 306 },
-          { code: "300433.SZ", name: "蓝思科技", lowLimit: 1001, upLimit: 1638 },
+          { code: "300433.SZ", name: "蓝思科技", lowLimit: 1104, upLimit: 1840 },
           { code: "300777.SZ", name: "中简科技", lowLimit: 132, upLimit: 198 },
           { code: "601127.SH", name: "赛力斯", lowLimit: 1800, upLimit: 2520 },
           { code: "605499.SH", name: "东鹏饮料", lowLimit: 1518, upLimit: 1794 },
@@ -96,7 +96,7 @@
           { code: "600584.SH", name: "长电科技", lowLimit: 512.5, upLimit: 717.5 },
           { code: "002028.SZ", name: "思源电气", lowLimit: 530.75, upLimit: 704.45 },
           { code: "688698.SH", name: "伟创电气", lowLimit: 82, upLimit: 123 },
-          { code: "002444.SZ", name: "巨星科技", lowLimit: 270, upLimit: 432 },
+          { code: "002444.SZ", name: "巨星科技", lowLimit: 351, upLimit: 468 },
           { code: "0700.HK", name: "腾讯控股", lowLimit: 44000, upLimit: 56000 },
           { code: "603486.SH", name: "科沃斯", lowLimit: 320, upLimit: 540 },
           { code: "300442.SZ", name: "润泽科技", lowLimit: 650, upLimit: 950 },
@@ -109,7 +109,11 @@
           { code: "300866.SZ", name: "安克创新", lowLimit: 504, upLimit: 693 },
           { code: "688037.SH", name: "芯源微", lowLimit: 132, upLimit: 220 },
           { code: "601138.SH", name: "工业富联", lowLimit: 3965, upLimit: 6710 },
-          { code: "002837.SZ", name: "英维克", lowLimit: 246, upLimit: 431 }
+          { code: "002837.SZ", name: "英维克", lowLimit: 246, upLimit: 431 },
+          { code: "601933.SH", name: "永辉超市", lowLimit: 350, upLimit: 700 },
+          { code: "2020.HK", name: "安踏体育", lowLimit: 2793, upLimit: 4410 },
+          { code: "300767.SZ", name: "震安科技", lowLimit: 40, upLimit: 100 },
+          { code: "601336.SH", name: "新华保险", lowLimit: 1100, upLimit: 1500 }
         ];
 
         // 获取 secid
